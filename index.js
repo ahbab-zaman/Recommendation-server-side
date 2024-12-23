@@ -38,6 +38,23 @@ async function run() {
       const result = await queryCollection.find(query).toArray();
       res.send(result);
     });
+
+    app.get("/recentQueries", async (req, res) => {
+      const query = req.body;
+      const result = await queryCollection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
+
+    app.get("/allQuery/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { "userInfo.email": email };
+      const result = await queryCollection.find(query).toArray();
+      res.send(result);
+    });
   } finally {
   }
 }
