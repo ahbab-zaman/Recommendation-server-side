@@ -33,7 +33,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/addBid", async (req, res) => {
+    app.get("/allQueries", async (req, res) => {
       const query = req.body;
       const result = await queryCollection.find(query).toArray();
       res.send(result);
