@@ -8,6 +8,12 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// const cookieOptions = {
+//   httpOnly: true,
+//   secure: process.env.NODE_ENV === "production",
+//   sameSite: process.env.NODE_ENV === "production" ? "None" : "strict",
+// };
+
 const uri = `mongodb+srv://${process.env.REVIEW_DB}:${process.env.REVIEW_PASS}@cluster0.73pqt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
@@ -20,6 +26,18 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const queryCollection = client.db("queryDB").collection("query");
+    app.post("/addBid", async (req, res) => {
+      const query = req.body;
+      const result = await queryCollection.insertOne(query);
+      res.send(result);
+    });
+
+    app.get("/addBid", async (req, res) => {
+      const query = req.body;
+      const result = await queryCollection.find(query).toArray();
+      res.send(result);
+    });
   } finally {
   }
 }
