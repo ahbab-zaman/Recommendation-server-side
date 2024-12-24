@@ -43,7 +43,7 @@ async function run() {
       const query = req.body;
       const result = await queryCollection
         .find(query)
-        .sort({ createdAt: -1 })
+        .sort({ _id: -1 })
         .limit(6)
         .toArray();
       res.send(result);
