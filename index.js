@@ -43,7 +43,7 @@ async function run() {
       const query = req.body;
       const result = await queryCollection
         .find(query)
-        .sort({ _id: -1 })
+        .sort({ createdAt: -1 })
         .limit(6)
         .toArray();
       res.send(result);
@@ -52,8 +52,14 @@ async function run() {
     app.get("/allQuery/:email", async (req, res) => {
       const email = req.params.email;
       const query = { "userInfo.email": email };
-      const result = await queryCollection.find(query).toArray();
-      res.send(result);
+      const result = await queryCollection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .toArray();
+      // if (result.length === 0) {
+      //   return res.status(404).send({ message: "No cards found" });
+      // }
+        res.send(result);
     });
   } finally {
   }
