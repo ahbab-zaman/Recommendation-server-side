@@ -126,6 +126,39 @@ async function run() {
       );
       res.send(result);
     });
+
+    app.get("/recommend/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { queryId: id };
+      const result = await recommendCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.delete("/deleteRecommendation/:id", async (req, res) => {
+      const id = req.params.id;
+      // const recommendData = req.body;
+      const query = { _id: new ObjectId(id) };
+      const result = await recommendCollection.deleteOne(query);
+      // const filter = { _id: new ObjectId(recommendData.queryId) };
+      const options = { upsert: true };
+      const update = {
+        $inc: { recommendationCount: -1 },
+      };
+      const decreasedCount = await queryCollection.updateOne(
+        query,
+        update,
+        options
+      );
+
+      res.send(result);
+    });
+
+    app.get("/allRecommend/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { recommender_email: email };
+      const result = await recommendCollection.find(query).toArray();
+      res.send(result);
+    });
   } finally {
   }
 }
