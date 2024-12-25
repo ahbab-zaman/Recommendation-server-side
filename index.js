@@ -6,7 +6,16 @@ const port = process.env.PORT || 5000;
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5174",
+      "https://recommendation-platform-1f3cf.firebaseapp.com",
+      "https://recommendation-platform-1f3cf.web.app",
+    ],
+    credentials: true,
+  })
+);
 
 // const cookieOptions = {
 //   httpOnly: true,
@@ -27,6 +36,10 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const queryCollection = client.db("queryDB").collection("query");
+    const recommendCollection = client
+      .db("recommendDB")
+      .collection("recommend");
+
     app.post("/addBid", async (req, res) => {
       const query = req.body;
       const result = await queryCollection.insertOne(query);
@@ -35,7 +48,10 @@ async function run() {
 
     app.get("/allQueries", async (req, res) => {
       const query = req.body;
-      const result = await queryCollection.find(query).toArray();
+      const result = await queryCollection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .toArray();
       res.send(result);
     });
 
@@ -76,11 +92,39 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/updatedQuery/:id", async (req, res) => {
+    app.put("/queryUpdate/:id", async (req, res) => {
       const id = req.params.id;
       const cursor = { _id: new ObjectId(id) };
       const updatedQuery = req.body;
-      const query = 
+      const query = {
+        $set: {
+          product_name: updatedQuery.name,
+          product_title: updatedQuery.title,
+          product_brand: updatedQuery.brand,
+          product_image: updatedQuery.photo,
+          boycott: updatedQuery.boycott,
+        },
+      };
+      const result = await queryCollection.updateOne(cursor, query);
+      res.send(result);
+    });
+
+    // Recommendation API
+
+    app.post("/addRecommend", async (req, res) => {
+      const recommendData = req.body;
+      const result = await recommendCollection.insertOne(recommendData);
+      const filter = { _id: new ObjectId(recommendData.queryId) };
+      const options = { upsert: true };
+      const update = {
+        $inc: { recommendationCount: +1 },
+      };
+      const updateRecommendCount = await queryCollection.updateOne(
+        filter,
+        update,
+        options
+      );
+      res.send(result);
     });
   } finally {
   }
