@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 const app = express();
@@ -56,10 +56,31 @@ async function run() {
         .find(query)
         .sort({ createdAt: -1 })
         .toArray();
-      // if (result.length === 0) {
-      //   return res.status(404).send({ message: "No cards found" });
-      // }
-        res.send(result);
+      if (result.length === 0) {
+        return res.send({ message: "No cards found" });
+      }
+      res.send(result);
+    });
+
+    app.get("/singleQuery/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await queryCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.delete("/deletedQuery/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await queryCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.put("/updatedQuery/:id", async (req, res) => {
+      const id = req.params.id;
+      const cursor = { _id: new ObjectId(id) };
+      const updatedQuery = req.body;
+      const query = 
     });
   } finally {
   }
