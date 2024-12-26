@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 const app = express();
@@ -14,14 +16,10 @@ app.use(
       "https://recommendation-platform-1f3cf.web.app",
     ],
     credentials: true,
+    optionsSuccessStatus: 200,
   })
 );
-
-// const cookieOptions = {
-//   httpOnly: true,
-//   secure: process.env.NODE_ENV === "production",
-//   sameSite: process.env.NODE_ENV === "production" ? "None" : "strict",
-// };
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.REVIEW_DB}:${process.env.REVIEW_PASS}@cluster0.73pqt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -33,19 +31,70 @@ const client = new MongoClient(uri, {
   },
 });
 
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies.token;
+  console.log(token);
+  if (!token) return res.status(401).send({ message: "Unauthorized access" });
+  jwt.verify(token, process.env.SECRET_KEY, (error, decoded) => {
+    if (error) {
+      return res.status(403).send({ message: "Unauthorized access" });
+    }
+    req.user = decoded;
+  });
+
+  next();
+};
+
 async function run() {
   try {
     const queryCollection = client.db("queryDB").collection("query");
     const recommendCollection = client.db("queryDB").collection("recommend");
 
-    app.post("/addBid", async (req, res) => {
+    // generate json web-token
+    app.post("/jwt", (req, res) => {
+      const email = req.body;
+      const token = jwt.sign(email, process.env.SECRET_KEY, {
+        expiresIn: "365d",
+      });
+      console.log(token);
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+    });
+
+    // clear cookie form browser
+    app.get("/logout", async (req, res) => {
+      res
+        .clearCookie("token", {
+          maxAge: 0,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+    });
+
+    app.post("/addBid", verifyToken, async (req, res) => {
       const query = req.body;
+      const decodedEmail = req?.user;
+      if (!decodedEmail)
+        return res.status(401).send({ message: "Forbidden access" });
+      console.log("query body", query);
       const result = await queryCollection.insertOne(query);
       res.send(result);
     });
 
     app.get("/allQueries", async (req, res) => {
-      const query = req.body;
+      const search = req.query.search;
+      let query = {
+        name: {
+          $regex: search,
+          $options: "i",
+        },
+      };
       const result = await queryCollection
         .find(query)
         .sort({ createdAt: -1 })
@@ -63,8 +112,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/allQuery/:email", async (req, res) => {
+    app.get("/allQuery/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
+      const decodedEmail = req?.user.email;
+      if (decodedEmail !== email) {
+        return res.status(401).send({ message: "Forbidden access" });
+      }
       const query = { "userInfo.email": email };
       const result = await queryCollection
         .find(query)
