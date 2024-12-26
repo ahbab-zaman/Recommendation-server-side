@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: [
-      "http://localhost:5174",
+      "http://localhost:5173",
       "https://recommendation-platform-1f3cf.firebaseapp.com",
       "https://recommendation-platform-1f3cf.web.app",
     ],
@@ -36,9 +36,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const queryCollection = client.db("queryDB").collection("query");
-    const recommendCollection = client
-      .db("recommendDB")
-      .collection("recommend");
+    const recommendCollection = client.db("queryDB").collection("recommend");
 
     app.post("/addBid", async (req, res) => {
       const query = req.body;
@@ -75,6 +73,13 @@ async function run() {
       if (result.length === 0) {
         return res.send({ message: "No cards found" });
       }
+      res.send(result);
+    });
+
+    app.get("/myRecommend/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { "userInfo.email": email };
+      const result = await queryCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -117,7 +122,7 @@ async function run() {
       const filter = { _id: new ObjectId(recommendData.queryId) };
       const options = { upsert: true };
       const update = {
-        $inc: { recommendationCount: +1 },
+        $inc: { recommendationCount: 1 },
       };
       const updateRecommendCount = await queryCollection.updateOne(
         filter,
@@ -134,26 +139,37 @@ async function run() {
       res.send(result);
     });
 
-    app.delete("/deleteRecommendation/:id", async (req, res) => {
+    app.put("/decreaseCount/:id", async (req, res) => {
       const id = req.params.id;
-      // const recommendData = req.body;
+      const recommendData = req.body;
       const query = { _id: new ObjectId(id) };
-      const result = await recommendCollection.deleteOne(query);
-      // const filter = { _id: new ObjectId(recommendData.queryId) };
+      const filter = { _id: new ObjectId(recommendData.queryId) };
+      console.log(filter);
       const options = { upsert: true };
       const update = {
         $inc: { recommendationCount: -1 },
       };
-      const decreasedCount = await queryCollection.updateOne(
-        query,
+      const updateRecommendCount = await queryCollection.updateOne(
+        filter,
         update,
         options
       );
-
+      const result = await recommendCollection.deleteOne(query);
       res.send(result);
     });
 
     app.get("/allRecommend/:email", async (req, res) => {
+      const email = req.params.email;
+      console.log(email);
+      const query = {
+        recommender_email: email,
+      };
+      const result = await recommendCollection.find(query).toArray();
+      console.log(result);
+      res.send(result);
+    });
+
+    app.get("/recommender/:email", async (req, res) => {
       const email = req.params.email;
       const query = { recommender_email: email };
       const result = await recommendCollection.find(query).toArray();
