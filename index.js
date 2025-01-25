@@ -12,7 +12,6 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://recommendation-platform-1f3cf.firebaseapp.com",
       "https://recommendation-platform-1f3cf.web.app",
     ],
     credentials: true,
@@ -33,7 +32,6 @@ const client = new MongoClient(uri, {
 
 const verifyToken = (req, res, next) => {
   const token = req?.cookies.token;
-  console.log(token);
   if (!token) return res.status(401).send({ message: "Unauthorized access" });
   jwt.verify(token, process.env.SECRET_KEY, (error, decoded) => {
     if (error) {
@@ -79,25 +77,26 @@ async function run() {
 
     app.post("/addBid", verifyToken, async (req, res) => {
       const query = req.body;
-      const decodedEmail = req?.user;
-      if (!decodedEmail)
-        return res.status(401).send({ message: "Forbidden access" });
-      console.log("query body", query);
       const result = await queryCollection.insertOne(query);
       res.send(result);
     });
 
     app.get("/allQueries", async (req, res) => {
       const search = req.query.search;
+      const sort = req.query?.sort;
       let query = {
         name: {
           $regex: search,
           $options: "i",
         },
       };
+      let sortQuery = {};
+      if (sort == "true") {
+        sortQuery = { recommendationCount: -1 };
+      }
       const result = await queryCollection
         .find(query)
-        .sort({ createdAt: -1 })
+        .sort(sortQuery)
         .toArray();
       res.send(result);
     });
@@ -107,7 +106,7 @@ async function run() {
       const result = await queryCollection
         .find(query)
         .sort({ createdAt: -1 })
-        .limit(6)
+        .limit(8)
         .toArray();
       res.send(result);
     });
@@ -123,9 +122,6 @@ async function run() {
         .find(query)
         .sort({ createdAt: -1 })
         .toArray();
-      if (result.length === 0) {
-        return res.send({ message: "No cards found" });
-      }
       res.send(result);
     });
 
