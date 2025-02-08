@@ -13,6 +13,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://recommendation-platform-1f3cf.web.app",
+      "https://recommendation-platform-1f3cf.firebaseapp.com",
     ],
     credentials: true,
     optionsSuccessStatus: 200,
