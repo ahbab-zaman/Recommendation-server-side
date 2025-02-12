@@ -84,7 +84,8 @@ async function run() {
 
     app.get("/allQueries", async (req, res) => {
       const search = req.query.search;
-      const sort = req.query?.sort;
+      const sortAsc = req.query?.sortAsc;
+      const sortDsc = req.query?.sortDsc;
       let query = {
         name: {
           $regex: search,
@@ -92,7 +93,10 @@ async function run() {
         },
       };
       let sortQuery = {};
-      if (sort == "true") {
+      if (sortAsc == "true") {
+        sortQuery = { recommendationCount: 1 };
+      }
+      if (sortDsc == "true") {
         sortQuery = { recommendationCount: -1 };
       }
       const result = await queryCollection
@@ -194,7 +198,6 @@ async function run() {
       const recommendData = req.body;
       const query = { _id: new ObjectId(id) };
       const filter = { _id: new ObjectId(recommendData.queryId) };
-      console.log(filter);
       const options = { upsert: true };
       const update = {
         $inc: { recommendationCount: -1 },
@@ -210,12 +213,10 @@ async function run() {
 
     app.get("/allRecommend/:email", async (req, res) => {
       const email = req.params.email;
-      console.log(email);
       const query = {
         recommender_email: email,
       };
       const result = await recommendCollection.find(query).toArray();
-      console.log(result);
       res.send(result);
     });
 
